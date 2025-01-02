@@ -1,6 +1,6 @@
 import { motion } from "framer-motion"
 import { Input } from "./ui/input"
-import { Button } from "./ui/button"
+import { Button } from "@/components/ui/button"
 import { Tables, TablesInsert } from "@/types/schema"
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
@@ -123,8 +123,8 @@ export function ProjectTabs({
                                 }}
                                 onDoubleClick={() => setEditingProject(project.id)}
                                 className={`px-2 py-1 rounded relative ${currentProject?.id === project.id
-                                        ? 'text-white'
-                                        : 'text-zinc-500 hover:text-zinc-300'
+                                    ? 'text-white'
+                                    : 'text-zinc-500 hover:text-zinc-300'
                                     }`}
                             >
                                 {currentProject?.id === project.id && (

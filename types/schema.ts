@@ -11,6 +11,7 @@ export type DocumentContent = {
   title: string
   description: string
   url: string
+  tiptap?: Json
 }
 
 export type DocumentMetadata = {

@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize from 'rehype-sanitize'
 import { ProjectTabs } from "@/components/ProjectTabs"
 import { DocumentCard } from "@/components/DocumentCard"
 import { AddDocumentForm } from "@/components/AddDocumentForm"
-import { CodeBlock } from "@/components/CodeBlock"
 import { supabase } from "@/lib/supabase"
-import { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/types/schema"
+import type { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/types/schema"
+import { DocumentDialog } from "@/components/DocumentDialog"
 
 type Project = Tables<"projects"> & {
   documents: Tables<"documents">[]
@@ -165,7 +160,8 @@ export default function Home() {
         markdown: scrapeData.content.markdown || '',
         title: scrapeData.content.title || data.name,
         description: scrapeData.content.description || '',
-        url: data.url
+        url: data.url,
+        tiptap: scrapeData.content.tiptap || null
       }
 
       const metadata: DocumentMetadata = {
@@ -256,62 +252,13 @@ export default function Home() {
             </motion.div>
           </AnimatePresence>
         </div>
-      </div>
 
-      <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
-        <DialogContent className="bg-zinc-900 text-white border-zinc-800 max-w-4xl w-[95vw] max-h-[80vh] overflow-y-auto">
-          <DialogHeader className="space-y-4">
-            <div className="space-y-5">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="bg-zinc-800 px-2 py-1 rounded text-zinc-400">
-                  {selectedDoc?.category}
-                </span>
-                <span className={`px-2 py-1 rounded ${selectedDoc?.status === 'active'
-                  ? 'bg-emerald-500/10 text-emerald-500'
-                  : selectedDoc?.status === 'pending'
-                    ? 'bg-yellow-500/10 text-yellow-500'
-                    : 'bg-red-500/10 text-red-500'
-                  }`}>
-                  {selectedDoc?.status}
-                </span>
-              </div>
-              <DialogTitle>{selectedDoc?.title}</DialogTitle>
-            </div>
-            <p className="text-sm text-zinc-400">
-              {selectedDoc?.content?.description}
-            </p>
-          </DialogHeader>
-          <div className="prose prose-invert prose-sm max-w-none overflow-hidden">
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypeSanitize]}
-              components={{
-                h1: ({ children }) => (
-                  <h1 className="text-2xl font-bold mt-4 mb-4">{children}</h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="text-xl font-semibold mt-4 mb-3">{children}</h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="text-lg font-medium mt-4 mb-2">{children}</h3>
-                ),
-                p: ({ children }) => <p className="my-3 leading-relaxed">{children}</p>,
-                ul: ({ children }) => (
-                  <ul className="list-disc list-inside my-3 space-y-1">{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal list-inside my-3 space-y-1">{children}</ol>
-                ),
-                li: ({ children }) => <li className="ml-4">{children}</li>,
-                code: CodeBlock,
-                pre: ({ children }) => <div className="overflow-hidden">{children}</div>,
-              }}
-            >
-              {(selectedDoc?.content as DocumentContent)?.markdown?.replace(/^markdown\n/, '') || ''}
-            </Markdown>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <DocumentDialog
+          doc={selectedDoc}
+          onClose={() => setSelectedDoc(null)}
+          onUpdate={fetchProjects}
+        />
+      </div>
     </main>
   )
 }
