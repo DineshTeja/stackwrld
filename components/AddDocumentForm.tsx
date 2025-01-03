@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { Input } from "./ui/input"
-import { Button } from "./ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Category } from "@/types/document"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -17,7 +17,7 @@ export function AddDocumentForm({
     const [url, setUrl] = useState("")
     const [name, setName] = useState("")
     const [category, setCategory] = useState<Category | "">("")
-    const [isNaturalInput, setIsNaturalInput] = useState(false)
+    const [isNaturalInput, setIsNaturalInput] = useState(true)
     const [naturalInput, setNaturalInput] = useState("")
     const [isParsing, setIsParsing] = useState(false)
 
@@ -82,21 +82,6 @@ export function AddDocumentForm({
                 <div className="flex items-center gap-3 text-xs text-zinc-400">
                     <button
                         type="button"
-                        onClick={() => setIsNaturalInput(false)}
-                        className={`px-2 py-1 rounded relative ${!isNaturalInput ? 'text-white' : 'hover:text-zinc-300'}`}
-                    >
-                        {!isNaturalInput && (
-                            <motion.div
-                                layoutId="inputMode"
-                                className="absolute inset-0 bg-zinc-800 rounded"
-                                initial={false}
-                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                            />
-                        )}
-                        <span className="relative z-10">manual</span>
-                    </button>
-                    <button
-                        type="button"
                         onClick={() => setIsNaturalInput(true)}
                         className={`px-2 py-1 rounded relative ${isNaturalInput ? 'text-white' : 'hover:text-zinc-300'}`}
                     >
@@ -109,6 +94,21 @@ export function AddDocumentForm({
                             />
                         )}
                         <span className="relative z-10">natural</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsNaturalInput(false)}
+                        className={`px-2 py-1 rounded relative ${!isNaturalInput ? 'text-white' : 'hover:text-zinc-300'}`}
+                    >
+                        {!isNaturalInput && (
+                            <motion.div
+                                layoutId="inputMode"
+                                className="absolute inset-0 bg-zinc-800 rounded"
+                                initial={false}
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                        )}
+                        <span className="relative z-10">manual</span>
                     </button>
                 </div>
             </div>
