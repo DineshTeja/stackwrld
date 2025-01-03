@@ -21,7 +21,6 @@ import { DocumentContent } from '@/types/schema'
 import { supabase } from '@/lib/supabase'
 
 export const BlockEditor = ({
-  aiToken,
   ydoc,
   provider,
   documentId,
@@ -63,7 +62,6 @@ export const BlockEditor = ({
   }, [documentId, onUpdate, content?.tiptap])
 
   const { editor } = useBlockEditor({
-    aiToken,
     ydoc,
     provider,
     documentId,

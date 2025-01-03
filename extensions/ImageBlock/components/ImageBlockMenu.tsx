@@ -71,9 +71,7 @@ export const ImageBlockMenu = ({ editor, appendTo }: MenuProps): React.ReactElem
         onCreate: (instance: Instance) => {
           tippyInstance.current = instance
         },
-        appendTo: () => {
-          return appendTo?.current
-        },
+        appendTo: (ref: Element) => appendTo?.current || ref,
         plugins: [sticky],
         sticky: 'popper',
       }}

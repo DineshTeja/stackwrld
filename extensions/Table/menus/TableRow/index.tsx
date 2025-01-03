@@ -7,7 +7,7 @@ import { isRowGripSelected } from './utils'
 import { Icon } from '@/components/ui/Icon'
 import { MenuProps, ShouldShowProps } from '@/components/menus/types'
 
-export const TableRowMenu = React.memo(({ editor, appendTo }: MenuProps): JSX.Element => {
+export const TableRowMenu = React.memo(({ editor, appendTo }: MenuProps): React.ReactElement => {
   const shouldShow = useCallback(
     ({ view, state, from }: ShouldShowProps) => {
       if (!state || !from) {
@@ -37,9 +37,7 @@ export const TableRowMenu = React.memo(({ editor, appendTo }: MenuProps): JSX.El
       pluginKey="tableRowMenu"
       updateDelay={0}
       tippyOptions={{
-        appendTo: () => {
-          return appendTo?.current
-        },
+        appendTo: (ref: Element) => appendTo?.current || ref,
         placement: 'left',
         offset: [0, 15],
         popperOptions: {

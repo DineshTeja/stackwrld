@@ -7,7 +7,7 @@ import { isColumnGripSelected } from './utils'
 import { Icon } from '@/components/ui/Icon'
 import { MenuProps, ShouldShowProps } from '@/components/menus/types'
 
-export const TableColumnMenu = React.memo(({ editor, appendTo }: MenuProps): JSX.Element => {
+export const TableColumnMenu = React.memo(({ editor, appendTo }: MenuProps): React.ReactElement => {
   const shouldShow = useCallback(
     ({ view, state, from }: ShouldShowProps) => {
       if (!state) {
@@ -37,9 +37,7 @@ export const TableColumnMenu = React.memo(({ editor, appendTo }: MenuProps): JSX
       pluginKey="tableColumnMenu"
       updateDelay={0}
       tippyOptions={{
-        appendTo: () => {
-          return appendTo?.current
-        },
+        appendTo: (ref: Element) => appendTo?.current || ref,
         offset: [0, 15],
         popperOptions: {
           modifiers: [{ name: 'flip', enabled: false }],
