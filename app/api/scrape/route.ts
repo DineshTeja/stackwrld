@@ -13,10 +13,57 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json()
+    const { url, name, category } = await request.json()
 
+    // Handle empty URL with default content
     if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 })
+      const defaultContent = {
+        markdown: "Start typing to get started with your notes...",
+        title: name || "New Document",
+        description: `Empty document in ${category}`,
+        url: "",
+        tiptap: {
+          type: "doc",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 1, textAlign: "left" },
+              content: [
+                {
+                  type: "emoji",
+                  attrs: { name: "memo" }
+                },
+                {
+                  type: "text",
+                  text: ` ${name || "New Document"}`
+                }
+              ]
+            },
+            {
+              type: "paragraph",
+              attrs: { textAlign: "left" },
+              content: [
+                {
+                  type: "text",
+                  text: "Start typing to get started with your notes..."
+                }
+              ]
+            }
+          ]
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        content: defaultContent,
+        metadata: {
+          total: 1,
+          completed: 1,
+          creditsUsed: 0,
+          expiresAt: new Date().toISOString(),
+          hasMore: false
+        }
+      })
     }
 
     const scrapeResult = await firecrawl.scrapeUrl(url, { 

@@ -113,7 +113,7 @@ export default function Home() {
       const newDoc: TablesInsert<"documents"> = {
         id: crypto.randomUUID(),
         title: data.name,
-        preview: "Processing...",
+        preview: data.url ? "Processing..." : "Empty document",
         status: "pending",
         type: "webpage",
         category: data.category,
@@ -147,7 +147,11 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: data.url })
+        body: JSON.stringify({
+          url: data.url,
+          name: data.name,
+          category: data.category
+        })
       })
 
       const scrapeData = await response.json()
@@ -177,7 +181,7 @@ export default function Home() {
         .update({
           status: "active",
           title: content.title,
-          preview: content.description || 'Content extracted successfully',
+          preview: content.description || (data.url ? 'Content extracted successfully' : 'Empty document'),
           content,
           metadata
         })
@@ -210,9 +214,9 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex items-center gap-4">
+    <main className="min-h-screen bg-black text-white p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <h1 className="text-2xl font-light">stack.wrld</h1>
           <LayoutGroup>
             <ProjectTabs
@@ -224,7 +228,7 @@ export default function Home() {
           </LayoutGroup>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 w-full overflow-x-auto">
           <AddDocumentForm
             isProcessing={isProcessing}
             onSubmit={handleSubmit}
@@ -239,7 +243,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
             >
               {currentProject?.documents.map((doc) => (
                 <DocumentCard
