@@ -5,6 +5,7 @@ import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import { TiptapCollabProvider, WebSocketStatus } from '@hocuspocus/provider'
 import type { Doc as YDoc } from 'yjs'
+import { Editor } from '@tiptap/core'
 
 import { ExtensionKit } from '@/extensions/extension-kit'
 import { userColors, userNames } from '@/lib/constants'
@@ -41,7 +42,7 @@ export const useBlockEditor = ({
   // Track if content has been initialized
   const [isContentInitialized, setIsContentInitialized] = useState(false)
 
-  const handleUpdate = useCallback(({ editor }) => {
+  const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
     if (!documentId || !onContentUpdate || !initialDocContent) return
 
     // Only update if content has been initialized
