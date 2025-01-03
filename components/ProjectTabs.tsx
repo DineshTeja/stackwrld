@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Tables, TablesInsert } from "@/types/schema"
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 type Project = Tables<"projects"> & {
     documents: Tables<"documents">[]
@@ -85,64 +86,119 @@ export function ProjectTabs({
 
     return (
         <div className="flex items-center gap-2 text-sm">
-            <span className="text-zinc-500 text-lg">/</span>
-            {projects.map((project) => (
-                <div key={project.id} className="flex items-center">
-                    {editingProject === project.id ? (
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault()
-                                const form = e.target as HTMLFormElement
-                                const input = form.elements.namedItem('name') as HTMLInputElement
-                                handleRename(project.id, input.value)
-                            }}
-                            className="flex"
-                        >
-                            <Input
-                                name="name"
-                                defaultValue={project.name}
-                                autoFocus
-                                className="h-7 w-[120px] bg-zinc-800 border-0 text-sm"
-                                onBlur={(e) => handleRename(project.id, e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Escape') {
-                                        setEditingProject(null)
-                                    }
-                                }}
-                            />
-                        </form>
-                    ) : (
-                        <div className="relative">
-                            <button
-                                onClick={() => {
-                                    if (currentProject?.id !== project.id) {
-                                        onProjectChange(project)
-                                    } else {
-                                        setEditingProject(project.id)
-                                    }
-                                }}
-                                onDoubleClick={() => setEditingProject(project.id)}
-                                className={`px-2 py-1 rounded relative ${currentProject?.id === project.id
-                                    ? 'text-white'
-                                    : 'text-zinc-500 hover:text-zinc-300'
-                                    }`}
+            {/* Mobile View */}
+            <div className="flex sm:hidden items-center gap-2">
+                <span className="text-zinc-500 text-lg">/</span>
+                <Select value={currentProject?.id} onValueChange={(value) => {
+                    const project = projects.find(p => p.id === value)
+                    if (project) onProjectChange(project)
+                }}>
+                    <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-800 text-white">
+                        <SelectValue placeholder="Select Stack">
+                            {currentProject?.name || "Select Stack"}
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                        {projects.map(project => (
+                            <SelectItem
+                                key={project.id}
+                                value={project.id}
+                                className="text-white"
                             >
-                                {currentProject?.id === project.id && (
-                                    <TabBackground isActive={currentProject.id === project.id} />
-                                )}
-                                <span className="relative z-10">{project.name}</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-            ))}
-            <Button
-                size="sm"
-                onClick={handleCreateProject}
-                className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
-            >
-                + New Stack
-            </Button>
+                                {project.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="sm"
+                    onClick={handleCreateProject}
+                    className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
+                >
+                    + New Stack
+                </Button>
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:flex items-center gap-2">
+                <span className="text-zinc-500 text-lg">/</span>
+                {projects.map((project) => (
+                    <div key={project.id} className="flex items-center">
+                        {editingProject === project.id ? (
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    const form = e.target as HTMLFormElement
+                                    const input = form.elements.namedItem('name') as HTMLInputElement
+                                    handleRename(project.id, input.value)
+                                }}
+                                className="flex"
+                            >
+                                <Input
+                                    name="name"
+                                    defaultValue={project.name}
+                                    autoFocus
+                                    className="h-7 w-[120px] bg-zinc-800 border-0 text-sm"
+                                    onBlur={(e) => handleRename(project.id, e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            setEditingProject(null)
+                                        }
+                                    }}
+                                />
+                            </form>
+                        ) : (
+                            <ProjectTab
+                                project={project}
+                                isActive={currentProject?.id === project.id}
+                                onSelect={onProjectChange}
+                                onEdit={() => setEditingProject(project.id)}
+                            />
+                        )}
+                    </div>
+                ))}
+                <Button
+                    size="sm"
+                    onClick={handleCreateProject}
+                    className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
+                >
+                    + New Stack
+                </Button>
+            </div>
         </div>
     )
-} 
+}
+
+const ProjectTab = ({
+    project,
+    isActive,
+    onSelect,
+    onEdit
+}: {
+    project: Project
+    isActive: boolean
+    onSelect: (project: Project) => void
+    onEdit: () => void
+}) => (
+    <div className="relative">
+        <button
+            onClick={() => {
+                if (!isActive) {
+                    onSelect(project)
+                } else {
+                    onEdit()
+                }
+            }}
+            onDoubleClick={onEdit}
+            className={`px-2 py-1 rounded relative ${isActive
+                    ? 'text-white'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+        >
+            {isActive && (
+                <TabBackground isActive={isActive} />
+            )}
+            <span className="relative z-10">{project.name}</span>
+        </button>
+    </div>
+) 

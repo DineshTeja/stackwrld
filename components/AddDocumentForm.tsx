@@ -66,8 +66,12 @@ export function AddDocumentForm({
 
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (category && name && url) {
-            onSubmit({ name, category: category as Category, url })
+        if (category && name) {
+            onSubmit({
+                name,
+                category: category as Category,
+                url: url || ""
+            })
             if (!isProcessing) {
                 setUrl("")
                 setName("")
@@ -147,7 +151,7 @@ export function AddDocumentForm({
                     <motion.form
                         key="manual"
                         onSubmit={handleManualSubmit}
-                        className="flex gap-3"
+                        className="flex flex-col sm:flex-row gap-3"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
@@ -156,11 +160,11 @@ export function AddDocumentForm({
                             placeholder="Name (e.g. Tailwind CSS)"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-[240px] bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400 rounded-md"
+                            className="w-full sm:w-[240px] bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400 rounded-md"
                             disabled={isProcessing}
                         />
                         <Select value={category} onValueChange={(value) => setCategory(value as Category)}>
-                            <SelectTrigger className="w-[180px] bg-zinc-900 border-zinc-800 text-white">
+                            <SelectTrigger className="w-full sm:w-[180px] bg-zinc-900 border-zinc-800 text-white">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -181,13 +185,13 @@ export function AddDocumentForm({
                             placeholder="Documentation URL"
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
-                            className="flex-1 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400 rounded-md"
+                            className="w-full sm:flex-1 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400 rounded-md"
                             disabled={isProcessing}
                         />
                         <Button
                             type="submit"
-                            className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-md px-6"
-                            disabled={isProcessing || !url || !name || !category}
+                            className="w-full sm:w-auto bg-zinc-800 hover:bg-zinc-700 text-white rounded-md px-6"
+                            disabled={isProcessing || !name || !category}
                         >
                             {isProcessing ? "pushing..." : "stack.push"}
                         </Button>
