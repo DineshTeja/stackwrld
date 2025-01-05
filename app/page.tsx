@@ -10,7 +10,7 @@ import type { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/
 import { DocumentDialog } from "@/components/DocumentDialog"
 import { UserMenu } from "@/components/UserMenu"
 import { useUser } from "@/hooks/use-user"
-import { SignInButton } from "@/components/SignInButton"
+import { redirect } from "next/navigation"
 
 type Project = Tables<"projects"> & {
   documents: Tables<"documents">[]
@@ -237,15 +237,7 @@ export default function Home() {
   }
 
   if (!user) {
-    return (
-      <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-8">
-        <h1 className="text-2xl font-light">stack.wrld</h1>
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-zinc-400">Sign in to continue</p>
-          <SignInButton />
-        </div>
-      </main>
-    )
+    redirect('/signin')
   }
 
   return (
