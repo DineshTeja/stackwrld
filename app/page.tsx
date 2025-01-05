@@ -8,6 +8,9 @@ import { AddDocumentForm } from "@/components/AddDocumentForm"
 import { supabase } from "@/lib/supabase"
 import type { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/types/schema"
 import { DocumentDialog } from "@/components/DocumentDialog"
+import { UserMenu } from "@/components/UserMenu"
+import { useUser } from "@/hooks/use-user"
+import { SignInButton } from "@/components/SignInButton"
 
 type Project = Tables<"projects"> & {
   documents: Tables<"documents">[]
@@ -18,15 +21,22 @@ export default function Home() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<Tables<"documents"> | null>(null)
+  const { user, loading } = useUser()
 
   useEffect(() => {
-    fetchProjects()
-  }, [])
+    if (!loading && user) {
+      fetchProjects()
+    }
+  }, [user, loading])
 
   const fetchProjects = async () => {
+    console.log("Fetching projects for user:", user)
+    if (!user) return
+
     const { data: projectsData, error: projectsError } = await supabase
       .from("projects")
       .select("*")
+      .eq("user_id", user.id)
       .order('created_at', { ascending: true })
 
     if (projectsError) {
@@ -63,7 +73,7 @@ export default function Home() {
   }
 
   const handleError = async (error: unknown, category: Tables<"documents">["category"]) => {
-    if (!currentProject) return
+    if (!currentProject || !user) return
 
     const errorDoc: TablesInsert<"documents"> = {
       id: crypto.randomUUID(),
@@ -73,6 +83,7 @@ export default function Home() {
       type: "webpage",
       category,
       project_id: currentProject.id,
+      user_id: user.id,
       content: {
         markdown: '',
         title: 'Error',
@@ -105,7 +116,7 @@ export default function Home() {
     category: Tables<"documents">["category"],
     url: string
   }) => {
-    if (!currentProject) return
+    if (!currentProject || !user) return
 
     try {
       setIsProcessing(true)
@@ -118,6 +129,7 @@ export default function Home() {
         type: "webpage",
         category: data.category,
         project_id: currentProject.id,
+        user_id: user.id,
         content: null,
         metadata: null
       }
@@ -213,11 +225,37 @@ export default function Home() {
     await fetchProjects()
   }
 
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-8">
+          <h1 className="text-2xl font-light">stack.wrld</h1>
+          <p className="text-zinc-400">Loading...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-8">
+        <h1 className="text-2xl font-light">stack.wrld</h1>
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-zinc-400">Sign in to continue</p>
+          <SignInButton />
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <h1 className="text-2xl font-light">stack.wrld</h1>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-light">stack.wrld</h1>
+            <UserMenu />
+          </div>
           <LayoutGroup>
             <ProjectTabs
               projects={projects}

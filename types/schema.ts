@@ -37,6 +37,7 @@ export type Database = {
           status: Database["public"]["Enums"]["document_status"]
           title: string
           type: Database["public"]["Enums"]["document_type"]
+          user_id: string
         }
         Insert: {
           category: Database["public"]["Enums"]["document_category"]
@@ -49,6 +50,7 @@ export type Database = {
           status: Database["public"]["Enums"]["document_status"]
           title: string
           type: Database["public"]["Enums"]["document_type"]
+          user_id: string
         }
         Update: {
           category?: Database["public"]["Enums"]["document_category"]
@@ -61,6 +63,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["document_status"]
           title?: string
           type?: Database["public"]["Enums"]["document_type"]
+          user_id?: string
         }
         Relationships: [
           {
@@ -77,16 +80,19 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          user_id?: string
         }
         Relationships: []
       }
