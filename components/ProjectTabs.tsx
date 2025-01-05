@@ -5,6 +5,7 @@ import { Tables, TablesInsert } from "@/types/schema"
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { useUser } from "@/hooks/use-user"
 
 type Project = Tables<"projects"> & {
     documents: Tables<"documents">[]
@@ -40,6 +41,7 @@ export function ProjectTabs({
     onProjectsUpdate
 }: ProjectTabsProps) {
     const [editingProject, setEditingProject] = useState<string | null>(null)
+    const { user } = useUser()
 
     const handleRename = async (projectId: string, newName: string) => {
         const { error } = await supabase
@@ -62,9 +64,12 @@ export function ProjectTabs({
     }
 
     const handleCreateProject = async () => {
+        if (!user) return
+
         const newProject: TablesInsert<"projects"> = {
             name: `Stack ${projects.length + 1}`,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            user_id: user.id
         }
 
         const { data, error } = await supabase
@@ -191,8 +196,8 @@ const ProjectTab = ({
             }}
             onDoubleClick={onEdit}
             className={`px-2 py-1 rounded relative ${isActive
-                    ? 'text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                ? 'text-white'
+                : 'text-zinc-500 hover:text-zinc-300'
                 }`}
         >
             {isActive && (
