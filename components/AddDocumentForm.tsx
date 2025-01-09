@@ -34,26 +34,48 @@ export function AddDocumentForm({
                 body: JSON.stringify({ input: naturalInput })
             })
 
-            const data = await response.json()
+            // First try to parse the response as JSON
+            let data
+            try {
+                data = await response.json()
+            } catch (parseError) {
+                console.error('Failed to parse JSON response:', parseError)
+                // Reset form state
+                setIsParsing(false)
+                setIsNaturalInput(false)
+                return
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to parse input')
             }
 
+            // Validate the response data
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid response format')
+            }
+
             if (data.name && data.category && data.url) {
+                // Validate category before submitting
+                if (!isValidCategory(data.category)) {
+                    throw new Error(`Invalid category: ${data.category}`)
+                }
+
                 onSubmit({
                     name: data.name,
                     category: data.category as Category,
                     url: data.url
                 })
+
                 if (!isProcessing) {
                     setNaturalInput("")
                     setIsNaturalInput(false)
                 }
             } else {
-                setName(data.name)
-                setCategory(data.category)
-                setUrl(data.url)
+                // Only set valid fields
+                if (data.name) setName(data.name)
+                if (isValidCategory(data.category)) setCategory(data.category)
+                if (data.url) setUrl(data.url)
                 setIsNaturalInput(false)
             }
         } catch (error) {
@@ -62,6 +84,23 @@ export function AddDocumentForm({
         } finally {
             setIsParsing(false)
         }
+    }
+
+    // Helper function to validate category
+    const isValidCategory = (category: unknown): category is Category => {
+        const validCategories = [
+            "Frontend/Design",
+            "ORM/Database",
+            "Authentication",
+            "Security",
+            "State Management",
+            "Testing",
+            "API/Backend",
+            "DevOps",
+            "Documentation",
+            "Monitoring"
+        ]
+        return typeof category === 'string' && validCategories.includes(category)
     }
 
     const handleManualSubmit = (e: React.FormEvent) => {

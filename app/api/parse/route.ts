@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Groq from 'groq-sdk'
 import { Category } from '@/types/document'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
 })
 
 type ParsedInput = {
@@ -21,35 +21,78 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Input is required' }, { status: 400 })
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const tools = [
+      {
+        type: "function" as const,
+        function: {
+          name: "parse_document",
+          description: "Parse document information from natural language input",
+          parameters: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Name of the tool/library/framework"
+              },
+              category: {
+                type: "string",
+                enum: [
+                  "Frontend/Design",
+                  "ORM/Database",
+                  "Authentication",
+                  "Security",
+                  "State Management",
+                  "Testing",
+                  "API/Backend",
+                  "DevOps",
+                  "Documentation",
+                  "Monitoring"
+                ],
+                description: "Category of the tool/library/framework"
+              },
+              url: {
+                type: "string",
+                description: "Documentation URL of the tool/library/framework"
+              },
+              description: {
+                type: "string",
+                description: "Brief description (2-3 sentences max)"
+              }
+            },
+            required: ["name", "category", "url", "description"]
+          }
+        }
+      }
+    ]
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-70b-versatile",
       messages: [
         {
           role: "system",
-          content: `You are a helpful assistant that extracts structured information from natural language input. 
-          Extract the following information:
-          1. Name of the tool/library/framework (required)
-          2. Category (must be one of: Frontend/Design, ORM/Database, Authentication, Security, State Management, Testing, API/Backend, DevOps, Documentation, Monitoring)
-          3. Documentation URL (if not provided, find the official documentation URL)
-          4. Brief description (2-3 sentences max)
-          
-          Respond in JSON format with the following structure:
-          {
-            "name": "string",
-            "category": "string",
-            "url": "string",
-            "description": "string"
-          }`
+          content: `You are a helpful assistant that extracts structured information from natural language input about development tools and libraries. Extract the name, category, documentation URL, and a brief description.`
         },
         {
           role: "user",
           content: input
         }
       ],
-      response_format: { type: "json_object" }
+      tools: tools,
+      tool_choice: {
+        type: "function",
+        function: { name: "parse_document" }
+      },
+      temperature: 0.1,
+      max_tokens: 4096
     })
 
-    const result = JSON.parse(completion.choices[0].message.content || '{}')
+    const toolCall = completion.choices[0]?.message?.tool_calls?.[0]
+
+    if (!toolCall?.function?.arguments) {
+      throw new Error('Failed to parse input')
+    }
+
+    const result = JSON.parse(toolCall.function.arguments)
 
     // Validate category
     const validCategories = [
