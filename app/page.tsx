@@ -8,7 +8,6 @@ import { AddDocumentForm } from "@/components/AddDocumentForm"
 import { supabase } from "@/lib/supabase"
 import type { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/types/schema"
 import { DocumentDialog } from "@/components/DocumentDialog"
-import { UserMenu } from "@/components/UserMenu"
 import { useUser } from "@/hooks/use-user"
 import { redirect } from "next/navigation"
 
@@ -243,20 +242,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-light">stack.wrld</h1>
-            <UserMenu />
-          </div>
-          <LayoutGroup>
-            <ProjectTabs
-              projects={projects}
-              currentProject={currentProject}
-              onProjectChange={setCurrentProject}
-              onProjectsUpdate={setProjects}
-            />
-          </LayoutGroup>
-        </div>
+        <LayoutGroup>
+          <ProjectTabs
+            projects={projects}
+            currentProject={currentProject}
+            onProjectChange={setCurrentProject}
+            onProjectsUpdate={setProjects}
+          />
+        </LayoutGroup>
 
         <div className="space-y-2 w-full overflow-x-auto">
           <AddDocumentForm
