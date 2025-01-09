@@ -68,8 +68,7 @@ export function AddDocumentForm({
                 })
 
                 if (!isProcessing) {
-                    setNaturalInput("")
-                    setIsNaturalInput(false)
+                    resetForm()
                 }
             } else {
                 // Only set valid fields
@@ -112,11 +111,16 @@ export function AddDocumentForm({
                 url: url || ""
             })
             if (!isProcessing) {
-                setUrl("")
-                setName("")
-                setCategory("")
+                resetForm()
             }
         }
+    }
+
+    const resetForm = () => {
+        setUrl("")
+        setName("")
+        setCategory("")
+        setNaturalInput("")
     }
 
     return (

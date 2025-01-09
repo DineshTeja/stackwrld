@@ -1,61 +1,138 @@
 import { NextResponse } from 'next/server'
 import FirecrawlApp, { ScrapeResponse } from '@mendable/firecrawl-js'
-import OpenAI from 'openai'
+import Groq from 'groq-sdk'
 import { initialContent } from '@/lib/data/initialContent'
 
 const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_API_KEY || ''
 })
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
 })
 
-export async function POST(request: Request) {
-  try {
-    const { url, name, category } = await request.json()
+const processContent = async (scrapeResult: ScrapeResponse) => {
+  console.log('Starting content processing...')
+  const startTime = Date.now()
 
-    // Handle empty URL with default content
-    if (!url) {
-      const defaultContent = {
-        markdown: "Start typing to get started with your notes...",
-        title: name || "New Document",
-        description: `Empty document in ${category}`,
-        url: "",
-        tiptap: {
-          type: "doc",
-          content: [
-            {
-              type: "heading",
-              attrs: { level: 1, textAlign: "left" },
-              content: [
-                {
-                  type: "emoji",
-                  attrs: { name: "memo" }
-                },
-                {
-                  type: "text",
-                  text: ` ${name || "New Document"}`
-                }
-              ]
+  try {
+    const tools = [
+      {
+        type: "function" as const,
+        function: {
+          name: "generate_tiptap_content",
+          description: "Generate TipTap document structure from content",
+          parameters: {
+            type: "object",
+            properties: {
+              tiptap: {
+                type: "object",
+                description: "TipTap document structure with title, sections, and content"
+              }
             },
-            {
-              type: "paragraph",
-              attrs: { textAlign: "left" },
-              content: [
-                {
-                  type: "text",
-                  text: "Start typing to get started with your notes..."
-                }
-              ]
-            }
-          ]
+            required: ["tiptap"]
+          }
         }
       }
+    ]
 
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: "You are a document processor that creates structured content. Generate a concise overview in TipTap JSON format."
+        },
+        {
+          role: "user",
+          content: `Create a brief overview document with these sections:
+1. What it is
+2. Key features
+3. Common use cases
+
+Return a TipTap JSON structure:
+1. Level 1 heading with title and emoji
+2. Level 2 headings for sections
+3. Bullet points for features/uses
+4. Keep it concise
+
+Use this structure: ${JSON.stringify(initialContent, null, 2).slice(0, 400)}...
+
+Content to analyze:
+${scrapeResult.markdown?.slice(0, 1000)}`
+        }
+      ],
+      tools,
+      tool_choice: {
+        type: "function",
+        function: { name: "generate_tiptap_content" }
+      },
+      temperature: 0.7,
+      max_tokens: 4096
+    })
+
+    console.log('Content generation completed in', Date.now() - startTime, 'ms')
+    
+    const toolCall = completion.choices[0]?.message?.tool_calls?.[0]
+    if (!toolCall?.function?.arguments) {
+      throw new Error('Failed to generate content')
+    }
+
+    const { tiptap } = JSON.parse(toolCall.function.arguments)
+    return { tiptap }
+  } catch (error) {
+    console.error('Error in processContent:', error)
+    throw error
+  }
+}
+
+export async function POST(request: Request) {
+  const startTime = Date.now()
+  console.log('Starting scrape request...')
+
+  try {
+    const { url, name, category } = await request.json()
+    console.log('Processing URL:', url)
+
+    if (!url) {
+      console.log('Empty URL, returning default content')
       return NextResponse.json({
         success: true,
-        content: defaultContent,
+        content: {
+          markdown: "Start typing to get started with your notes...",
+          title: name || "New Document",
+          description: `Empty document in ${category}`,
+          url: "",
+          tiptap: {
+            type: "doc",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1, textAlign: "left" },
+                content: [
+                  {
+                    type: "emoji",
+                    attrs: { name: "memo" }
+                  },
+                  {
+                    type: "text",
+                    text: ` ${name || "New Document"}`
+                  }
+                ]
+              },
+              {
+                type: "paragraph",
+                attrs: { textAlign: "left" },
+                content: [
+                  {
+                    type: "text",
+                    text: "Start typing to get started with your notes..."
+                  }
+                ]
+              }
+            ]
+          }
+        },
         metadata: {
           total: 1,
           completed: 1,
@@ -66,108 +143,39 @@ export async function POST(request: Request) {
       })
     }
 
-    const scrapeResult = await firecrawl.scrapeUrl(url, { 
+    console.log('Starting URL scrape...')
+    const scrapeStartTime = Date.now()
+    
+    const scrapePromise = firecrawl.scrapeUrl(url, { 
       formats: ['markdown', 'html'] 
-    }) as ScrapeResponse
+    });
+
+    const timeoutPromise = new Promise<ScrapeResponse>((_, reject) => 
+      setTimeout(() => reject(new Error('Scrape operation timed out')), 12000)
+    );
+
+    const scrapeResult = await Promise.race([scrapePromise, timeoutPromise]);
+
+    console.log('URL scrape completed in', Date.now() - scrapeStartTime, 'ms')
 
     if (!scrapeResult.success) {
+      console.error('Scrape failed:', scrapeResult.error)
       return NextResponse.json(
         { error: `Failed to scrape: ${scrapeResult.error}` },
         { status: 400 }
       )
     }
 
-    // First get the markdown content like before
-    const markdownCompletion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { 
-          role: "user", 
-          content: `Based on this content, create a clear markdown document that explains:
+    const { tiptap } = await processContent(scrapeResult)
 
-1. What this technology/tool/service is
-2. What problems it solves
-3. How it works
-4. Key features and capabilities
-5. Common use cases
-
-Format your response as clean markdown. For code blocks, ensure they are properly fenced with triple backticks and language identifiers.
-Do not include any metadata or frontmatter.
-
-Content to analyze:
-
-${scrapeResult.markdown}`
-        }
-      ]
-    })
-
-    // Clean up the markdown response
-    const formattedMarkdown = markdownCompletion.choices[0].message.content
-      ?.trim()
-      .replace(/^```markdown\s*/, '')
-      .replace(/\s*```$/, '')
-      || ''
-
-    // Now generate TipTap JSON structure with a more explicit prompt
-    const tiptapCompletion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a JSON generator that creates TipTap-compatible document structures. Always respond with valid JSON only, no explanations or other text."
-        },
-        {
-          role: "user",
-          content: `Convert this markdown into a TipTap JSON document structure.
-Use this example structure for reference: ${JSON.stringify(initialContent, null, 2)}
-
-Rules:
-1. Return ONLY the JSON object, no other text
-2. Start with a level 1 heading containing the title
-3. Include an emoji node in the heading (choose an appropriate emoji)
-4. Convert markdown headings, paragraphs, code blocks, and lists
-5. Preserve all formatting including bold, links, etc
-6. Use the same node structure as the example
-
-Markdown to convert:
-
-${formattedMarkdown}`
-        }
-      ],
-      response_format: { type: "json_object" } // Force JSON response
-    })
-
-    let tiptapContent;
-    try {
-      tiptapContent = JSON.parse(tiptapCompletion.choices[0].message.content || '{}')
-    } catch (error) {
-      console.error('Failed to parse TipTap JSON:', error)
-      // Fallback to a basic structure if parsing fails
-      tiptapContent = {
-        type: 'doc',
-        content: [
-          {
-            type: 'heading',
-            attrs: { level: 1, textAlign: 'left' },
-            content: [{ type: 'text', text: scrapeResult.metadata?.title || 'Document' }]
-          },
-          {
-            type: 'paragraph',
-            attrs: { textAlign: 'left' },
-            content: [{ type: 'text', text: formattedMarkdown }]
-          }
-        ]
-      }
-    }
-
-    return NextResponse.json({
+    const response = {
       success: true,
       content: {
-        markdown: formattedMarkdown,
-        title: scrapeResult.metadata?.title || '',
+        markdown: "Content available in rich text editor",
+        title: scrapeResult.metadata?.title || name,
         description: scrapeResult.metadata?.description || '',
-        url: url,
-        tiptap: tiptapContent
+        url,
+        tiptap
       },
       metadata: {
         total: 1,
@@ -176,7 +184,10 @@ ${formattedMarkdown}`
         expiresAt: new Date().toISOString(),
         hasMore: false
       }
-    })
+    }
+
+    console.log('Total request time:', Date.now() - startTime, 'ms')
+    return NextResponse.json(response)
 
   } catch (error) {
     console.error('Error processing content:', error)
