@@ -6,6 +6,9 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { useUser } from "@/hooks/use-user"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Trash2 } from "lucide-react"
+import { UserMenu } from "./UserMenu"
 
 type Project = Tables<"projects"> & {
     documents: Tables<"documents">[]
@@ -89,86 +92,174 @@ export function ProjectTabs({
         onProjectChange(projectWithDocs)
     }
 
+    const handleDeleteProject = async (projectId: string) => {
+        if (!user) return
+
+        const { error } = await supabase
+            .from("projects")
+            .delete()
+            .eq("id", projectId)
+
+        if (error) {
+            console.error("Error deleting project:", error)
+            return
+        }
+
+        const updatedProjects = projects.filter(p => p.id !== projectId)
+        onProjectsUpdate(updatedProjects)
+
+        if (currentProject?.id === projectId) {
+            onProjectChange(updatedProjects[0] || null)
+        }
+    }
+
     return (
-        <div className="flex items-center gap-2 text-sm">
-            {/* Mobile View */}
-            <div className="flex sm:hidden items-center gap-2">
-                <span className="text-zinc-500 text-lg">/</span>
-                <Select value={currentProject?.id} onValueChange={(value) => {
-                    const project = projects.find(p => p.id === value)
-                    if (project) onProjectChange(project)
-                }}>
-                    <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-800 text-white">
-                        <SelectValue placeholder="Select Stack">
-                            {currentProject?.name || "Select Stack"}
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800">
-                        {projects.map(project => (
-                            <SelectItem
-                                key={project.id}
-                                value={project.id}
-                                className="text-white"
-                            >
-                                {project.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="sm"
-                    onClick={handleCreateProject}
-                    className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
-                >
-                    + New Stack
-                </Button>
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-light">stack.wrld</h1>
+                <UserMenu />
             </div>
 
-            {/* Desktop View */}
-            <div className="hidden sm:flex items-center gap-2">
-                <span className="text-zinc-500 text-lg">/</span>
-                {projects.map((project) => (
-                    <div key={project.id} className="flex items-center">
-                        {editingProject === project.id ? (
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault()
-                                    const form = e.target as HTMLFormElement
-                                    const input = form.elements.namedItem('name') as HTMLInputElement
-                                    handleRename(project.id, input.value)
-                                }}
-                                className="flex"
-                            >
-                                <Input
-                                    name="name"
-                                    defaultValue={project.name}
-                                    autoFocus
-                                    className="h-7 w-[120px] bg-zinc-800 border-0 text-sm"
-                                    onBlur={(e) => handleRename(project.id, e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Escape') {
-                                            setEditingProject(null)
-                                        }
-                                    }}
-                                />
-                            </form>
-                        ) : (
-                            <ProjectTab
-                                project={project}
-                                isActive={currentProject?.id === project.id}
-                                onSelect={onProjectChange}
-                                onEdit={() => setEditingProject(project.id)}
-                            />
-                        )}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    {/* Mobile View */}
+                    <div className="flex sm:hidden items-center gap-2">
+                        <span className="text-zinc-500 text-lg">/</span>
+                        <Select value={currentProject?.id} onValueChange={(value) => {
+                            const project = projects.find(p => p.id === value)
+                            if (project) onProjectChange(project)
+                        }}>
+                            <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-800 text-white">
+                                <SelectValue placeholder="Select Stack">
+                                    {currentProject?.name || "Select Stack"}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                {projects.map(project => (
+                                    <div key={project.id} className="flex items-center justify-between px-2">
+                                        <SelectItem
+                                            value={project.id}
+                                            className="text-white flex-1"
+                                        >
+                                            {project.name}
+                                        </SelectItem>
+                                        {project.id === currentProject?.id && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <button className="p-1 rounded-sm hover:bg-zinc-700">
+                                                        <Trash2 className="w-4 h-4 text-zinc-400 hover:text-red-400" />
+                                                    </button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle className="text-white">Delete Stack</AlertDialogTitle>
+                                                        <AlertDialogDescription className="text-zinc-400">
+                                                            Are you sure you want to delete &ldquo;{project.name}&rdquo;? This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel className="bg-zinc-800 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => handleDeleteProject(project.id)}
+                                                            className="bg-red-500 hover:bg-red-600"
+                                                        >
+                                                            Delete
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
+                                    </div>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button
+                            size="sm"
+                            onClick={handleCreateProject}
+                            className="text-2xl text-zinc-500 hover:text-zinc-400 bg-transparent h-8 w-8 flex items-center justify-center"
+                        >
+                            +
+                        </Button>
                     </div>
-                ))}
-                <Button
-                    size="sm"
-                    onClick={handleCreateProject}
-                    className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
-                >
-                    + New Stack
-                </Button>
+
+                    {/* Desktop View */}
+                    <div className="hidden sm:flex items-center gap-2">
+                        <span className="text-zinc-500 text-lg">/</span>
+                        {projects.map((project) => (
+                            <div key={project.id} className="flex items-center">
+                                {editingProject === project.id ? (
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault()
+                                            const form = e.target as HTMLFormElement
+                                            const input = form.elements.namedItem('name') as HTMLInputElement
+                                            handleRename(project.id, input.value)
+                                        }}
+                                        className="flex"
+                                    >
+                                        <Input
+                                            name="name"
+                                            defaultValue={project.name}
+                                            autoFocus
+                                            className="h-7 w-[120px] bg-zinc-800 border-0 text-sm"
+                                            onBlur={(e) => handleRename(project.id, e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Escape') {
+                                                    setEditingProject(null)
+                                                }
+                                            }}
+                                        />
+                                    </form>
+                                ) : (
+                                    <ProjectTab
+                                        project={project}
+                                        isActive={currentProject?.id === project.id}
+                                        onSelect={onProjectChange}
+                                        onEdit={() => setEditingProject(project.id)}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                        <Button
+                            size="sm"
+                            onClick={handleCreateProject}
+                            className="text-xs text-zinc-500 hover:text-zinc-400 bg-transparent"
+                        >
+                            + New Stack
+                        </Button>
+                    </div>
+                </div>
+
+                {currentProject && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs text-red-500/70 hover:text-red-500 hover:bg-transparent"
+                            >
+                                <Trash2 className="w-4 h-4" /> Delete Stack
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">Delete Stack</AlertDialogTitle>
+                                <AlertDialogDescription className="text-zinc-400">
+                                    Are you sure you want to delete &ldquo;{currentProject.name}&rdquo;? This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-zinc-800 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => handleDeleteProject(currentProject.id)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                >
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
         </div>
     )
