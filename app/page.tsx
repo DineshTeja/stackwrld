@@ -6,7 +6,7 @@ import { ProjectTabs } from "@/components/ProjectTabs"
 import { DocumentCard } from "@/components/DocumentCard"
 import { AddDocumentForm } from "@/components/AddDocumentForm"
 import { supabase } from "@/lib/supabase"
-import type { Tables, TablesInsert, DocumentContent, DocumentMetadata } from "@/types/schema"
+import type { Tables, TablesInsert } from "@/types/schema"
 import { DocumentDialog } from "@/components/DocumentDialog"
 import { useUser } from "@/hooks/use-user"
 import { redirect } from "next/navigation"
@@ -139,70 +139,65 @@ export default function Home() {
         documents: [optimisticDoc, ...prev.documents]
       } : prev)
 
-      const { data: insertedDoc, error: insertError } = await supabase
-        .from("documents")
-        .insert(newDoc)
-        .select()
-        .single()
+      const [insertResult, scrapeResponse] = await Promise.all([
+        supabase
+          .from("documents")
+          .insert(newDoc)
+          .select()
+          .single(),
 
-      if (insertError || !insertedDoc) {
-        setCurrentProject(prev => prev ? {
-          ...prev,
-          documents: prev.documents.filter(d => d.id !== newDoc.id)
-        } : prev)
-        throw new Error(insertError?.message || "Failed to insert document")
-      }
-
-      const response = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: data.url,
-          name: data.name,
-          category: data.category
+        fetch('/api/scrape', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: data.url,
+            name: data.name,
+            category: data.category
+          })
         })
-      })
+      ])
 
-      const scrapeData = await response.json()
+      if (insertResult.error) {
+        throw new Error(insertResult.error.message)
+      }
 
-      if (!response.ok) {
+      const scrapeData = await scrapeResponse.json()
+      if (!scrapeResponse.ok) {
         throw new Error(scrapeData.error || 'Failed to extract content')
-      }
-
-      const content: DocumentContent = {
-        markdown: scrapeData.content.markdown || '',
-        title: scrapeData.content.title || data.name,
-        description: scrapeData.content.description || '',
-        url: data.url,
-        tiptap: scrapeData.content.tiptap || null
-      }
-
-      const metadata: DocumentMetadata = {
-        total: scrapeData.metadata.total || 0,
-        completed: scrapeData.metadata.completed || 0,
-        creditsUsed: scrapeData.metadata.creditsUsed || 0,
-        expiresAt: scrapeData.metadata.expiresAt || new Date().toISOString(),
-        hasMore: scrapeData.metadata.hasMore || false
       }
 
       const { error: updateError } = await supabase
         .from("documents")
         .update({
           status: "active",
-          title: content.title,
-          preview: content.description || (data.url ? 'Content extracted successfully' : 'Empty document'),
-          content,
-          metadata
+          title: scrapeData.content.title || data.name,
+          preview: scrapeData.content.description || (data.url ? 'Content extracted successfully' : 'Empty document'),
+          content: scrapeData.content,
+          metadata: scrapeData.metadata
         })
-        .eq("id", insertedDoc.id)
+        .eq("id", insertResult.data.id)
 
       if (updateError) {
         throw new Error(updateError.message)
       }
 
-      await fetchProjects()
+      setCurrentProject(prev => {
+        if (!prev) return prev
+        const updatedDocs = prev.documents.map(doc =>
+          doc.id === insertResult.data.id
+            ? {
+              ...doc,
+              status: "active" as "active" | "pending" | "error",
+              title: scrapeData.content.title || data.name,
+              preview: scrapeData.content.description || 'Content extracted successfully',
+              content: scrapeData.content,
+              metadata: scrapeData.metadata
+            }
+            : doc
+        )
+        return { ...prev, documents: updatedDocs }
+      })
+
     } catch (error) {
       handleError(error, data.category)
     } finally {
